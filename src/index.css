@@ -1,0 +1,12 @@
+/* Reset only — all RailGaadi styles live in src/styles/index.css */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
