@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import type { LiveJourney, Station } from '../../types';
 import { useMapStore } from '../../stores/mapStore';
 import { useSimulationStore } from '../../stores/simulationStore';
@@ -12,8 +13,32 @@ interface MapViewProps {
   onSelectStation?: (station: Station) => void;
 }
 
-// Reliable dark vector map style fallback
-const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+// 100% reliable self-contained Dark raster style (zero external JSON/glyph dependency)
+const FALLBACK_DARK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'
+      ],
+      tileSize: 256,
+      attribution: '© OpenStreetMap © CARTO'
+    }
+  },
+  layers: [
+    {
+      id: 'carto-dark-layer',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 20
+    }
+  ]
+};
 
 export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -34,48 +59,50 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
   const trainLat = isPlaying ? simLat : journey.location?.latitude || fallbackLat;
   const trainLng = isPlaying ? simLng : journey.location?.longitude || fallbackLng;
 
-
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     const maptilerKey = import.meta.env.VITE_MAPTILER_API_KEY;
-    const hasMapTilerKey = maptilerKey && maptilerKey !== 'your_maptiler_api_key_here';
+    const hasMapTilerKey =
+      Boolean(maptilerKey) &&
+      maptilerKey !== 'your_maptiler_api_key_here' &&
+      maptilerKey !== 'undefined' &&
+      maptilerKey !== '';
 
-    // Primary style candidate
-    const primaryStyle = hasMapTilerKey
+    // If valid MapTiler key exists, use MapTiler Vector style; otherwise use rock-solid Dark style
+    const initialStyle: maplibregl.StyleSpecification | string = hasMapTilerKey
       ? `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${maptilerKey}`
-      : CARTO_DARK_STYLE;
+      : FALLBACK_DARK_STYLE;
 
     let map: maplibregl.Map;
 
     try {
       map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: primaryStyle,
+        style: initialStyle,
         center: [trainLng, trainLat],
         zoom: 9,
-        pitch: 40,
-        bearing: -10,
+        pitch: 35,
+        bearing: -5,
         attributionControl: false
       });
 
       mapRef.current = map;
 
-      // Force resize to ensure canvas matches container bounds
-      setTimeout(() => {
-        map.resize();
-      }, 200);
+      // Force canvas layout calculation
+      const r1 = setTimeout(() => map.resize(), 100);
+      const r2 = setTimeout(() => map.resize(), 500);
 
-      // Timeout fallback: If MapTiler key is blocked/invalid, fallback to Carto Dark after 2.5s
-      const fallbackTimer = setTimeout(() => {
-        if (!map.loaded() && hasMapTilerKey) {
-          console.warn('[MapView] MapTiler style loading timed out, falling back to CartoDB Dark.');
-          map.setStyle(CARTO_DARK_STYLE);
+      // Safe fallback if remote MapTiler style fails to load
+      map.on('error', (e) => {
+        console.warn('[MapView] Map tile warning:', e);
+        if (hasMapTilerKey && !map.loaded()) {
+          console.info('[MapView] Switching to guaranteed fallback dark style');
+          map.setStyle(FALLBACK_DARK_STYLE);
         }
-      }, 2500);
+      });
 
       map.on('load', () => {
-        clearTimeout(fallbackTimer);
         setMapLoaded(true);
         map.resize();
 
@@ -164,7 +191,7 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
         trainEl.style.width = '38px';
         trainEl.style.height = '38px';
         trainEl.style.borderRadius = '50%';
-        trainEl.style.background = 'var(--primary-gradient)';
+        trainEl.style.background = 'var(--primary-gradient, linear-gradient(135deg, #00e5ff 0%, #3b82f6 100%))';
         trainEl.style.display = 'flex';
         trainEl.style.alignItems = 'center';
         trainEl.style.justifyContent = 'center';
@@ -182,21 +209,11 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
       map.on('dragstart', () => {
         setFollowMode(false);
       });
-
-      // Handle style load error gracefully
-      map.on('error', (e) => {
-        console.warn('[MapView] MapLibre tile warning/error:', e);
-        // Only set error state if map canvas couldn't render at all
-        if (!map.loaded() && !mapRef.current) {
-          setHasError(true);
-        }
-      });
     } catch (err) {
       console.error('[MapView] Error initializing map:', err);
       setHasError(true);
     }
 
-    // Handle window resize
     const handleResize = () => mapRef.current?.resize();
     window.addEventListener('resize', handleResize);
 
@@ -231,7 +248,7 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
         style={{
           width: '100%',
           height: '100%',
-          minHeight: '360px',
+          minHeight: '420px',
           background: 'var(--bg-card-solid)',
           borderRadius: 'var(--radius-lg)',
           display: 'flex',
@@ -256,12 +273,13 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '360px' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '420px' }}>
       <div
         ref={mapContainerRef}
         style={{
           width: '100%',
           height: '100%',
+          minHeight: '420px',
           borderRadius: 'var(--radius-lg)',
           overflow: 'hidden'
         }}
