@@ -21,16 +21,17 @@ export const TelemetryControlBar: React.FC<TelemetryControlBarProps> = ({ journe
     resetSimulation
   } = useSimulationStore();
 
-  const totalDistance = journey.train.totalDistanceKm || 705;
+  const totalDistance = journey.train.totalDistanceKm || 600;
   const stations = journey.stations;
 
-  // Initialize simulation bounds if needed
+  // Initialize simulation bounds when train changes or on start
   useEffect(() => {
-    if (stations.length > 0 && distanceCoveredKm === 0 && !isPlaying) {
+    if (stations.length > 0 && !isPlaying) {
       const first = stations[0];
       resetSimulation(first.latitude, first.longitude, totalDistance);
     }
-  }, [stations, distanceCoveredKm, isPlaying, totalDistance, resetSimulation]);
+  }, [journey.id, totalDistance, resetSimulation]);
+
 
   // Simulation Loop
   useEffect(() => {

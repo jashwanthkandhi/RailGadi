@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import type { Station } from '../../types';
+import type { Station, Weather, ElevationPoint } from '../../types';
 import { useLiveJourney } from '../../hooks/useLiveJourney';
+import { fetchWeatherAtCoords } from '../../services/weatherService';
 import { useToast } from '../../hooks/useToast';
 import { JourneyHeader } from '../../components/journey/JourneyHeader';
 import { MapView } from '../../components/map/MapView';
@@ -24,9 +25,62 @@ export const JourneyPage: React.FC = () => {
   const { id = '12727' } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'analytics' | 'elevation' | 'weather'>('overview');
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [weatherData, setWeatherData] = useState<{ current?: Weather; next?: Weather; destination?: Weather }>({});
+  const [elevationData, setElevationData] = useState<ElevationPoint[]>([]);
   const { showToast } = useToast();
 
   const { journey, isLoading, isError, isFetching, isStale, refetch } = useLiveJourney(id);
+
+  useEffect(() => {
+    if (!journey) return;
+
+    // Fetch Live Weather for train coordinates
+    const loadWeather = async () => {
+      try {
+        const promises: Promise<Weather | null>[] = [];
+
+        if (journey.location) {
+          promises.push(fetchWeatherAtCoords(journey.location.latitude, journey.location.longitude));
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+
+        if (journey.nextStation) {
+          promises.push(fetchWeatherAtCoords(journey.nextStation.latitude, journey.nextStation.longitude));
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+
+        if (journey.destination) {
+          promises.push(fetchWeatherAtCoords(journey.destination.latitude, journey.destination.longitude));
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+
+        const [cur, nxt, dest] = await Promise.all(promises);
+        setWeatherData({
+          current: cur || MOCK_WEATHER_DATA.current,
+          next: nxt || MOCK_WEATHER_DATA.next,
+          destination: dest || MOCK_WEATHER_DATA.destination
+        });
+      } catch (e) {
+        console.warn('[JourneyPage] Live weather fetch failed:', e);
+      }
+    };
+
+    loadWeather();
+
+    // Map station elevation profile dynamically
+    if (journey.stations && journey.stations.length > 0) {
+      const totalDist = journey.train.totalDistanceKm || 600;
+      const points: ElevationPoint[] = journey.stations.map((st, idx) => ({
+        distanceKm: Math.round((idx / Math.max(1, journey.stations.length - 1)) * totalDist),
+        elevationMeters: st.elevationMeters || Math.round(40 + Math.abs(Math.sin(idx) * 450)),
+        stationName: st.code
+      }));
+      setElevationData(points);
+    }
+  }, [journey]);
 
   const handleRefresh = async () => {
     await refetch();
@@ -236,7 +290,7 @@ export const JourneyPage: React.FC = () => {
           <StationCard
             title="Current Location / Station (Click for Amenities)"
             station={journey.currentStation}
-            timeInfo={`Departed 12 min ago · ${journey.speedKmph ?? 90} km/h`}
+            timeInfo={`Speed: ${journey.speedKmph ?? 85} km/h · ${journey.delayMinutes > 0 ? `+${journey.delayMinutes}m delay` : 'On Time'}`}
           />
         </div>
         <div
@@ -286,8 +340,8 @@ export const JourneyPage: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
           <StationTimeline stations={journey.stations} currentStationId={journey.nextStation?.id} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <DelayDistributionChart />
-            <SpeedProfileChart />
+            <DelayDistributionChart stations={journey.stations} />
+            <SpeedProfileChart stations={journey.stations} speedKmph={journey.speedKmph} />
           </div>
         </div>
       )}
@@ -298,18 +352,26 @@ export const JourneyPage: React.FC = () => {
 
       {activeTab === 'analytics' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-          <DelayDistributionChart />
-          <SpeedProfileChart />
+          <DelayDistributionChart stations={journey.stations} />
+          <SpeedProfileChart stations={journey.stations} speedKmph={journey.speedKmph} />
         </div>
       )}
 
-      {activeTab === 'elevation' && <ElevationProfile elevationData={MOCK_ELEVATION_PROFILE} />}
+      {activeTab === 'elevation' && (
+        <ElevationProfile elevationData={elevationData.length > 0 ? elevationData : MOCK_ELEVATION_PROFILE} />
+      )}
 
       {activeTab === 'weather' && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-          <WeatherCard title="Current Position Weather" weather={MOCK_WEATHER_DATA.current} />
-          <WeatherCard title="Next Station Weather" weather={MOCK_WEATHER_DATA.next} />
-          <WeatherCard title="Destination Weather" weather={MOCK_WEATHER_DATA.destination} />
+          {weatherData.current && (
+            <WeatherCard title={`Current (${journey.location?.latitude.toFixed(2)}°, ${journey.location?.longitude.toFixed(2)}°)`} weather={weatherData.current} />
+          )}
+          {weatherData.next && (
+            <WeatherCard title={`Next Stop: ${journey.nextStation?.name}`} weather={weatherData.next} />
+          )}
+          {weatherData.destination && (
+            <WeatherCard title={`Destination: ${journey.destination?.name}`} weather={weatherData.destination} />
+          )}
         </div>
       )}
 
@@ -328,3 +390,4 @@ export const JourneyPage: React.FC = () => {
     </div>
   );
 };
+

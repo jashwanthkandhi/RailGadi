@@ -27,8 +27,12 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
   const simLng = useSimulationStore((state) => state.currentLng);
   const isPlaying = useSimulationStore((state) => state.isPlaying);
 
-  const trainLat = isPlaying ? simLat : journey.location?.latitude || 17.965;
-  const trainLng = isPlaying ? simLng : journey.location?.longitude || 79.591;
+  const fallbackLat = journey.stations[0]?.latitude ?? 20.5937;
+  const fallbackLng = journey.stations[0]?.longitude ?? 78.9629;
+
+  const trainLat = isPlaying ? simLat : journey.location?.latitude || fallbackLat;
+  const trainLng = isPlaying ? simLng : journey.location?.longitude || fallbackLng;
+
 
   useEffect(() => {
     if (!mapContainerRef.current) return;

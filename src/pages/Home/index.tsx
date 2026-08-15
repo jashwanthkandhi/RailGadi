@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_TRAINS } from '../../services/mockDataService';
+import { POPULAR_INDIAN_TRAINS } from '../../services/trainService';
 import { useUserStore } from '../../stores/userStore';
 import { useToast } from '../../hooks/useToast';
 import type { Train as TrainType } from '../../types';
-import { Search, Train, ArrowRight, History, Plus, X, Trash2 } from 'lucide-react';
+import { Search, Train, ArrowRight, History, Plus, X, Trash2, Zap } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { CustomTrainModal } from '../../components/train/CustomTrainModal';
@@ -12,22 +12,45 @@ import { CustomTrainModal } from '../../components/train/CustomTrainModal';
 export const HomePage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-  const [trainsList, setTrainsList] = useState<TrainType[]>(MOCK_TRAINS);
+  const [trainsList, setTrainsList] = useState<TrainType[]>(POPULAR_INDIAN_TRAINS);
   const navigate = useNavigate();
   const { recentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } = useUserStore();
   const { showToast } = useToast();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    const rawQ = query.trim();
+    if (!rawQ) return;
+
+    const cleanNum = rawQ.replace(/[^0-9]/g, '');
+
+    // 1. Direct 5-digit train number input -> navigate straight to journey
+    if (cleanNum.length === 5) {
+      const existing = trainsList.find((t) => t.number === cleanNum);
+      const targetTrain: TrainType = existing || {
+        id: cleanNum,
+        number: cleanNum,
+        name: `Express Train ${cleanNum}`,
+        source: 'Origin Station',
+        destination: 'Destination Station',
+        totalDistanceKm: 600,
+        trainType: 'Superfast Express'
+      };
+      addRecentSearch(targetTrain);
+      navigate(`/journey/${cleanNum}`);
+      return;
+    }
+
+    // 2. Exact or partial match in popular catalog
     const match = trainsList.find(
-      (t) => t.number.includes(query) || t.name.toLowerCase().includes(query.toLowerCase())
+      (t) => t.number.includes(rawQ) || t.name.toLowerCase().includes(rawQ.toLowerCase())
     );
+
     if (match) {
       addRecentSearch(match);
       navigate(`/journey/${match.id}`);
     } else {
-      navigate(`/search?q=${encodeURIComponent(query)}`);
+      navigate(`/search?q=${encodeURIComponent(rawQ)}`);
     }
   };
 
@@ -75,7 +98,7 @@ export const HomePage: React.FC = () => {
             marginBottom: '24px'
           }}
         >
-          <div className="pulse-dot" /> Live Railway Intelligence & Telemetry Simulator
+          <div className="pulse-dot" /> Live Indian Railways Telemetry & GPS Tracking
         </div>
 
         <h1
@@ -95,19 +118,19 @@ export const HomePage: React.FC = () => {
           style={{
             fontSize: '1.15rem',
             color: 'var(--text-secondary)',
-            maxWidth: '640px',
+            maxWidth: '680px',
             margin: '0 auto 32px auto',
             lineHeight: 1.6
           }}
         >
-          Track live Indian Railway trains with interactive map telemetry, station ETAs, platform numbers, coach positions, delay analytics, and GPS simulation.
+          Track any train in India with real-time GPS telemetry, live station ETAs, platform numbers, coach positions, delay analytics, and weather forecasts.
         </p>
 
         {/* Train Search Bar */}
         <form
           onSubmit={handleSearchSubmit}
           style={{
-            maxWidth: '620px',
+            maxWidth: '640px',
             margin: '0 auto 24px auto',
             display: 'flex',
             gap: '10px',
@@ -132,7 +155,7 @@ export const HomePage: React.FC = () => {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Enter train number or name (e.g. 12727 or Godavari)..."
+              placeholder="Enter any 5-digit train number (e.g. 12626, 12727, 12951)..."
               style={{
                 width: '100%',
                 background: 'transparent',
@@ -149,7 +172,7 @@ export const HomePage: React.FC = () => {
           </Button>
         </form>
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <Button
             variant="secondary"
             size="md"
@@ -163,7 +186,7 @@ export const HomePage: React.FC = () => {
 
       {/* Quick Access Grid */}
       <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
           {/* Recent Searches */}
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -242,17 +265,18 @@ export const HomePage: React.FC = () => {
             )}
           </Card>
 
-          {/* Popular & Custom Trains */}
+          {/* Featured Express Fleet */}
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Train size={18} color="#10b981" />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Featured & Custom Express Fleet</h3>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Featured Express Fleet</h3>
               </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Realtime Live</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {trainsList.slice(0, 5).map((train) => (
+              {trainsList.slice(0, 7).map((train) => (
                 <div
                   key={train.id}
                   onClick={() => {
@@ -266,8 +290,9 @@ export const HomePage: React.FC = () => {
                     padding: '10px 14px',
                     borderRadius: 'var(--radius-md)',
                     background: train.isCustom ? 'rgba(0, 229, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                    border: train.isCustom ? '1px solid rgba(0, 229, 255, 0.3)' : 'none',
-                    cursor: 'pointer'
+                    border: train.isCustom ? '1px solid rgba(0, 229, 255, 0.3)' : '1px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)'
                   }}
                 >
                   <div>
@@ -275,7 +300,12 @@ export const HomePage: React.FC = () => {
                       <strong style={{ color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
                         {train.number}
                       </strong>{' '}
-                      <span style={{ color: 'var(--text-primary)' }}>{train.name}</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{train.name}</span>
+                      {train.trainType === 'Vande Bharat' && (
+                        <span style={{ fontSize: '0.65rem', background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.4)', padding: '1px 6px', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                          <Zap size={10} /> VB
+                        </span>
+                      )}
                       {train.isCustom && (
                         <span style={{ fontSize: '0.65rem', background: 'var(--primary)', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
                           CUSTOM
@@ -283,7 +313,7 @@ export const HomePage: React.FC = () => {
                       )}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {train.source.split(' ')[0]} → {train.destination.split(' ')[0]}
+                      {train.source.split('(')[0]} → {train.destination.split('(')[0]} • {train.totalDistanceKm} km
                     </div>
                   </div>
                   <ArrowRight size={14} color="var(--text-muted)" />
@@ -303,3 +333,4 @@ export const HomePage: React.FC = () => {
     </div>
   );
 };
+

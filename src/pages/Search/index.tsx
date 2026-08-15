@@ -38,6 +38,22 @@ export const SearchPage: React.FC = () => {
 
   // Keyboard navigation handler (ArrowUp, ArrowDown, Enter, Esc)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const cleanNum = query.trim().replace(/[^0-9]/g, '');
+      if (cleanNum.length === 5) {
+        navigate(`/journey/${cleanNum}`);
+        return;
+      }
+      if (filteredTrains.length === 0) return;
+      const targetTrain = selectedIndex >= 0 ? filteredTrains[selectedIndex] : filteredTrains[0];
+      if (targetTrain) {
+        addRecentSearch(targetTrain);
+        navigate(`/journey/${targetTrain.id}`);
+      }
+      return;
+    }
+
     if (filteredTrains.length === 0) return;
 
     if (e.key === 'ArrowDown') {
@@ -46,18 +62,12 @@ export const SearchPage: React.FC = () => {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredTrains.length - 1));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const targetTrain = selectedIndex >= 0 ? filteredTrains[selectedIndex] : filteredTrains[0];
-      if (targetTrain) {
-        addRecentSearch(targetTrain);
-        navigate(`/journey/${targetTrain.id}`);
-      }
     } else if (e.key === 'Escape') {
       setQuery('');
       inputRef.current?.blur();
     }
   };
+
 
   const handleClear = () => {
     setQuery('');

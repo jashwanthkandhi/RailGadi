@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useLiveJourney } from '../../hooks/useLiveJourney';
+import type { ElevationPoint } from '../../types';
 import { MOCK_ELEVATION_PROFILE } from '../../services/mockDataService';
 import { MetricCard } from '../../components/analytics/MetricCard';
 import { StationTimeline } from '../../components/analytics/StationTimeline';
@@ -21,6 +22,20 @@ export const AnalyticsPage: React.FC = () => {
       </div>
     );
   }
+
+  const maxElevStation = journey.stations.length > 0
+    ? journey.stations.reduce((max, s) => ((s.elevationMeters || 0) > (max.elevationMeters || 0) ? s : max), journey.stations[0])
+    : null;
+
+  const totalDist = journey.train.totalDistanceKm || 600;
+  const elevationData: ElevationPoint[] = journey.stations.map((st, idx) => ({
+    distanceKm: Math.round((idx / Math.max(1, journey.stations.length - 1)) * totalDist),
+    elevationMeters: st.elevationMeters || 100,
+    stationName: st.code
+  }));
+
+  const avgSpeed = journey.speedKmph || 85;
+  const topSpeed = Math.round(avgSpeed * 1.25);
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px 80px 24px' }}>
@@ -50,22 +65,22 @@ export const AnalyticsPage: React.FC = () => {
         />
         <MetricCard
           label="Delay Status"
-          value={`+${journey.delayMinutes} min`}
-          subtext="Recovering near Kazipet"
+          value={journey.delayMinutes > 0 ? `+${journey.delayMinutes} min` : 'On Time'}
+          subtext={journey.currentStation ? `Near ${journey.currentStation.name}` : 'Enroute'}
           icon={<Clock size={22} />}
-          accentColor="#f59e0b"
+          accentColor={journey.delayMinutes > 0 ? '#f59e0b' : '#10b981'}
         />
         <MetricCard
           label="Average Speed"
-          value="92 km/h"
-          subtext="Top speed: 115 km/h"
+          value={`${avgSpeed} km/h`}
+          subtext={`Top speed: ${topSpeed} km/h`}
           icon={<ArrowUpRight size={22} />}
           accentColor="#10b981"
         />
         <MetricCard
           label="Highest Elevation"
-          value="543 m"
-          subtext="Secunderabad Jn"
+          value={`${maxElevStation?.elevationMeters || 450} m`}
+          subtext={maxElevStation?.name || 'Route Apex'}
           icon={<Mountain size={22} />}
           accentColor="#8b5cf6"
         />
@@ -73,15 +88,16 @@ export const AnalyticsPage: React.FC = () => {
 
       {/* Charts Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '24px', marginBottom: '28px' }}>
-        <DelayDistributionChart />
-        <SpeedProfileChart />
+        <DelayDistributionChart stations={journey.stations} />
+        <SpeedProfileChart stations={journey.stations} speedKmph={journey.speedKmph} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-        <ElevationProfile elevationData={MOCK_ELEVATION_PROFILE} />
+        <ElevationProfile elevationData={elevationData.length > 0 ? elevationData : MOCK_ELEVATION_PROFILE} />
         <StationTimeline stations={journey.stations} currentStationId={journey.nextStation?.id} />
       </div>
     </div>
   );
 };
+
 

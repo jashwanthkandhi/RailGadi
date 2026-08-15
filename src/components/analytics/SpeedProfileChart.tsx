@@ -1,13 +1,31 @@
 import React from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import type { Station } from '../../types';
 import { MOCK_SPEED_PROFILE } from '../../services/mockDataService';
 import { Card } from '../ui/Card';
-import { Gauge, Zap } from 'lucide-react';
+import { Gauge } from 'lucide-react';
 
-export const SpeedProfileChart: React.FC = () => {
-  const data = MOCK_SPEED_PROFILE;
-  const maxSpeed = Math.max(...data.map((d) => d.speedKmph));
-  const avgSpeed = Math.round(data.reduce((acc, curr) => acc + curr.speedKmph, 0) / data.length);
+interface SpeedProfileChartProps {
+  stations?: Station[];
+  speedKmph?: number;
+}
+
+export const SpeedProfileChart: React.FC<SpeedProfileChartProps> = ({ stations, speedKmph = 90 }) => {
+  const data = stations && stations.length > 1
+    ? stations.map((s, idx) => {
+        const pct = idx / (stations.length - 1);
+        const isHalt = s.status === 'CURRENT' || idx === 0 || idx === stations.length - 1;
+        const speed = isHalt ? 0 : Math.round(speedKmph + Math.sin(pct * Math.PI * 4) * 20);
+        return {
+          distanceKm: Math.round(pct * 500),
+          speedKmph: Math.max(0, speed),
+          sectionName: `${s.code} Section`
+        };
+      })
+    : MOCK_SPEED_PROFILE;
+
+  const maxSpeed = Math.max(0, ...data.map((d) => d.speedKmph));
+  const avgSpeed = data.length > 0 ? Math.round(data.reduce((acc, curr) => acc + curr.speedKmph, 0) / data.length) : 0;
 
   return (
     <Card>
@@ -34,7 +52,7 @@ export const SpeedProfileChart: React.FC = () => {
       </div>
 
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-        Real-time telemetry speed trajectory across railway sections, bridges, and station yards.
+        Real-time telemetry speed trajectory across railway sections and station yards.
       </p>
 
       <div style={{ width: '100%', height: 240 }}>
@@ -81,10 +99,7 @@ export const SpeedProfileChart: React.FC = () => {
           </LineChart>
         </ResponsiveContainer>
       </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-        <Zap size={14} color="var(--primary)" /> Maximum cruising speed achieved on Khammam Express Corridor (115 km/h).
-      </div>
     </Card>
   );
 };
+

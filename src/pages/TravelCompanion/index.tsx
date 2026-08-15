@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLiveJourney } from '../../hooks/useLiveJourney';
+import { fetchWeatherAtCoords } from '../../services/weatherService';
+import type { Weather } from '../../types';
 import { MOCK_WEATHER_DATA, MOCK_GEOGRAPHIC_FEATURES } from '../../services/mockDataService';
 import { WeatherCard } from '../../components/weather/WeatherCard';
 import { Card } from '../../components/ui/Card';
@@ -9,6 +11,45 @@ import { Compass, Landmark, Mountain, Waves, Loader2 } from 'lucide-react';
 export const TravelCompanionPage: React.FC = () => {
   const { id = '12727' } = useParams<{ id: string }>();
   const { journey, isLoading } = useLiveJourney(id);
+  const [weatherData, setWeatherData] = useState<{ current?: Weather; next?: Weather; destination?: Weather }>({});
+
+  useEffect(() => {
+    if (!journey) return;
+
+    const loadWeather = async () => {
+      try {
+        const promises: Promise<Weather | null>[] = [];
+        if (journey.location) {
+          promises.push(fetchWeatherAtCoords(journey.location.latitude, journey.location.longitude));
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+
+        if (journey.nextStation) {
+          promises.push(fetchWeatherAtCoords(journey.nextStation.latitude, journey.nextStation.longitude));
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+
+        if (journey.destination) {
+          promises.push(fetchWeatherAtCoords(journey.destination.latitude, journey.destination.longitude));
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+
+        const [cur, nxt, dest] = await Promise.all(promises);
+        setWeatherData({
+          current: cur || MOCK_WEATHER_DATA.current,
+          next: nxt || MOCK_WEATHER_DATA.next,
+          destination: dest || MOCK_WEATHER_DATA.destination
+        });
+      } catch (e) {
+        console.warn('[TravelCompanionPage] Weather fetch failed:', e);
+      }
+    };
+
+    loadWeather();
+  }, [journey]);
 
   if (isLoading || !journey) {
     return (
@@ -38,9 +79,18 @@ export const TravelCompanionPage: React.FC = () => {
         Route Weather Intelligence
       </h2>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '36px' }}>
-        <WeatherCard title="Current Position Weather" weather={MOCK_WEATHER_DATA.current} />
-        <WeatherCard title="Next Station Weather" weather={MOCK_WEATHER_DATA.next} />
-        <WeatherCard title="Destination Weather" weather={MOCK_WEATHER_DATA.destination} />
+        <WeatherCard
+          title={`Current Position (${journey.currentStation?.name || 'Enroute'})`}
+          weather={weatherData.current || MOCK_WEATHER_DATA.current}
+        />
+        <WeatherCard
+          title={`Next Stop (${journey.nextStation?.name || 'Upcoming'})`}
+          weather={weatherData.next || MOCK_WEATHER_DATA.next}
+        />
+        <WeatherCard
+          title={`Destination (${journey.destination?.name || 'Terminal'})`}
+          weather={weatherData.destination || MOCK_WEATHER_DATA.destination}
+        />
       </div>
 
       {/* Geographic Highlights Grid */}
@@ -75,3 +125,4 @@ export const TravelCompanionPage: React.FC = () => {
     </div>
   );
 };
+

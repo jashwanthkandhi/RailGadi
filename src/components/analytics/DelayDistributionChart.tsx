@@ -1,13 +1,27 @@
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import type { Station } from '../../types';
 import { MOCK_DELAY_HISTORY } from '../../services/mockDataService';
 import { Card } from '../ui/Card';
-import { Clock, TrendingUp } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
-export const DelayDistributionChart: React.FC = () => {
-  const data = MOCK_DELAY_HISTORY;
-  const maxDelay = Math.max(...data.map((d) => d.delayMinutes));
-  const avgDelay = Math.round(data.reduce((acc, curr) => acc + curr.delayMinutes, 0) / data.length);
+interface DelayDistributionChartProps {
+  stations?: Station[];
+}
+
+export const DelayDistributionChart: React.FC<DelayDistributionChartProps> = ({ stations }) => {
+  const data = stations && stations.length > 0
+    ? stations.map((s) => ({
+        stationCode: s.code,
+        stationName: s.name,
+        scheduledTime: s.scheduledArrival || s.scheduledDeparture || '--:--',
+        actualTime: s.actualArrival || s.actualDeparture || '--:--',
+        delayMinutes: Math.max(0, s.delayMinutes || 0)
+      }))
+    : MOCK_DELAY_HISTORY;
+
+  const maxDelay = Math.max(0, ...data.map((d) => d.delayMinutes));
+  const avgDelay = data.length > 0 ? Math.round(data.reduce((acc, curr) => acc + curr.delayMinutes, 0) / data.length) : 0;
 
   return (
     <Card>
@@ -34,7 +48,7 @@ export const DelayDistributionChart: React.FC = () => {
       </div>
 
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-        Tracks delay build-up and recovery trends across key railway junctions.
+        Tracks real-time delay build-up and recovery trends across railway junctions.
       </p>
 
       <div style={{ width: '100%', height: 240 }}>
@@ -82,10 +96,7 @@ export const DelayDistributionChart: React.FC = () => {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', fontSize: '0.8rem', color: '#10b981' }}>
-        <TrendingUp size={14} /> Punctuality recovery observed between Rajahmundry & Visakhapatnam (-11 min delay recovery).
-      </div>
     </Card>
   );
 };
+
