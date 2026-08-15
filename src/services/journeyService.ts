@@ -3,8 +3,11 @@
  * Real-time Live Journey telemetry service.
  * Fetches live Indian Railway train running status, GPS coordinates,
  * station delays, platforms, and coach positions via RailRadar API.
+ * Uses Turf.js track geometry snapping and AI delay prediction engine.
  */
 import { getJourneyForTrain } from './mockDataService';
+import { calculateBearing, buildRoutePolyline, snapToTrack } from './trackGeometryService';
+import { enrichStationsWithPredictions } from './delayPredictionService';
 import type { LiveJourney, Station, Train, JourneyStatus } from '../types';
 
 const RAILRADAR_BASE = import.meta.env.VITE_RAILRADAR_BASE_URL ?? '/api/v1';
@@ -48,7 +51,7 @@ function adaptRailRadarToLiveJourney(metaJson: any, liveJson: any, fallbackId: s
   // Build Station List
   const rawStations = liveRoute.length > 0 ? liveRoute : metaRoute;
 
-  const stations: Station[] = rawStations
+  const rawStationList: Station[] = rawStations
     .filter((stItem: any) => stItem.isHalt || stItem.station?.code || stItem.stationCode)
     .map((stItem: any, idx: number) => {
       const code = stItem.stationCode || stItem.station?.code || `ST-${idx}`;
@@ -83,31 +86,50 @@ function adaptRailRadarToLiveJourney(metaJson: any, liveJson: any, fallbackId: s
         status,
         platformNumber: stItem.platform ? `PF ${stItem.platform}` : undefined,
         coachPosition: coachPosArr,
-        elevationMeters: Math.round(50 + Math.abs(Math.sin(idx) * 450))
+        elevationMeters: undefined // Loaded via real elevationService
       };
     });
 
   // Calculate current station and next station
-  const currentIdx = stations.findIndex((s) => s.status === 'CURRENT') !== -1
-    ? stations.findIndex((s) => s.status === 'CURRENT')
-    : stations.findIndex((s) => s.status === 'COMPLETED');
+  const currentIdx = rawStationList.findIndex((s) => s.status === 'CURRENT') !== -1
+    ? rawStationList.findIndex((s) => s.status === 'CURRENT')
+    : rawStationList.findIndex((s) => s.status === 'COMPLETED');
   
   const validCurIdx = Math.max(0, currentIdx !== -1 ? currentIdx : 0);
-  const currentStation = stations[validCurIdx] || stations[0];
-  const nextStation = stations[validCurIdx + 1] || stations[stations.length - 1] || currentStation;
-  const destination = stations[stations.length - 1] || currentStation;
+  const currentStation = rawStationList[validCurIdx] || rawStationList[0];
+  const nextStation = rawStationList[validCurIdx + 1] || rawStationList[rawStationList.length - 1] || currentStation;
+  const destination = rawStationList[rawStationList.length - 1] || currentStation;
 
-  // Interpolate Live GPS position
+  // Build curved GIS track polyline
+  const routePolyline = buildRoutePolyline(rawStationList);
+
+  // Position along track
   const progressRatio = curLoc?.segmentProgress ?? 0.3;
-  const currentLat = currentStation.latitude + (nextStation.latitude - currentStation.latitude) * progressRatio;
-  const currentLng = currentStation.longitude + (nextStation.longitude - currentStation.longitude) * progressRatio;
+  const rawLat = currentStation.latitude + (nextStation.latitude - currentStation.latitude) * progressRatio;
+  const rawLng = currentStation.longitude + (nextStation.longitude - currentStation.longitude) * progressRatio;
+
+  // Snap to actual track curve
+  const snappedLocation = snapToTrack(rawLat, rawLng, routePolyline);
 
   // Calculate Progress
   const distCovered = Math.round(
-    ((validCurIdx + progressRatio) / Math.max(1, stations.length - 1)) * totalDist
+    ((validCurIdx + progressRatio) / Math.max(1, rawStationList.length - 1)) * totalDist
   );
   const distRemaining = Math.max(0, totalDist - distCovered);
   const percentage = Math.min(100, Math.max(0, Math.round((distCovered / totalDist) * 100)));
+
+  // Real or derived speed (km/h) based on train movement state
+  let speedKmph: number = curLoc?.speed ?? liveData?.speed ?? 0;
+  if (speedKmph === 0 && currentStation.status !== 'CURRENT' && percentage < 100 && percentage > 0) {
+    // Train in transit between stations: realistic corridor operational speed
+    speedKmph = metaTrain?.type?.includes('Vande Bharat') ? 110 : 85;
+  }
+
+  // Heading calculation using geodesic bearing
+  const headingDegrees = calculateBearing(
+    { latitude: currentStation.latitude, longitude: currentStation.longitude },
+    { latitude: nextStation.latitude, longitude: nextStation.longitude }
+  );
 
   // Status mapping
   const overallDelay = liveData?.delayMinutes ?? curLoc?.delayMinutes ?? 0;
@@ -137,6 +159,14 @@ function adaptRailRadarToLiveJourney(metaJson: any, liveJson: any, fallbackId: s
       : ['Daily']
   };
 
+  // Enrich upcoming stations with predictive arrival intelligence
+  const stations = enrichStationsWithPredictions(
+    rawStationList,
+    currentStation.code,
+    overallDelay,
+    trainObj
+  );
+
   return {
     id: `j-${trainObj.number}`,
     trainId: trainObj.number,
@@ -146,12 +176,9 @@ function adaptRailRadarToLiveJourney(metaJson: any, liveJson: any, fallbackId: s
     currentStation,
     nextStation,
     destination,
-    location: {
-      latitude: currentLat,
-      longitude: currentLng
-    },
-    speedKmph: Math.round(75 + Math.sin(percentage) * 25),
-    headingDegrees: 78,
+    location: snappedLocation,
+    speedKmph,
+    headingDegrees,
     progress: {
       percentage,
       distanceCoveredKm: distCovered,
@@ -187,7 +214,23 @@ export const fetchLiveJourney = async (trainId: string): Promise<LiveJourney> =>
     }
   }
 
-  // ——— Fallback to local journey generator per train ID ———
-  return getJourneyForTrain(trainId);
-};
+  // Fallback to rich structured journey dataset enriched with predictions
+  const localJourney = getJourneyForTrain(trainId);
+  const routePolyline = buildRoutePolyline(localJourney.stations);
+  const snappedLoc = localJourney.location
+    ? snapToTrack(localJourney.location.latitude, localJourney.location.longitude, routePolyline)
+    : localJourney.location;
 
+  const predictedStations = enrichStationsWithPredictions(
+    localJourney.stations,
+    localJourney.currentStation?.code || localJourney.stations[0]?.code || '',
+    localJourney.delayMinutes,
+    localJourney.train
+  );
+
+  return {
+    ...localJourney,
+    location: snappedLoc,
+    stations: predictedStations
+  };
+};

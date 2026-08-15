@@ -16,6 +16,9 @@ import { StationDetailModal } from '../../components/station/StationDetailModal'
 import { DelayDistributionChart } from '../../components/analytics/DelayDistributionChart';
 import { SpeedProfileChart } from '../../components/analytics/SpeedProfileChart';
 import { MobileJourneySheet } from '../../components/journey/MobileJourneySheet';
+import { CrowdsourceBanner } from '../../components/journey/CrowdsourceBanner';
+import { CoachFinderWidget } from '../../components/station/CoachFinderWidget';
+import { fetchRouteElevations } from '../../services/elevationService';
 import { MOCK_ELEVATION_PROFILE, MOCK_WEATHER_DATA } from '../../services/mockDataService';
 import { BarChart3, Compass, MapPin, Gauge, Loader2, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -70,15 +73,11 @@ export const JourneyPage: React.FC = () => {
 
     loadWeather();
 
-    // Map station elevation profile dynamically
+    // Fetch Real Terrain Elevation Profile via elevationService
     if (journey.stations && journey.stations.length > 0) {
-      const totalDist = journey.train.totalDistanceKm || 600;
-      const points: ElevationPoint[] = journey.stations.map((st, idx) => ({
-        distanceKm: Math.round((idx / Math.max(1, journey.stations.length - 1)) * totalDist),
-        elevationMeters: st.elevationMeters || Math.round(40 + Math.abs(Math.sin(idx) * 450)),
-        stationName: st.code
-      }));
-      setElevationData(points);
+      fetchRouteElevations(journey.stations).then((points) => {
+        setElevationData(points);
+      });
     }
   }, [journey]);
 
@@ -337,11 +336,26 @@ export const JourneyPage: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-          <StationTimeline stations={journey.stations} currentStationId={journey.nextStation?.id} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <DelayDistributionChart stations={journey.stations} />
-            <SpeedProfileChart stations={journey.stations} speedKmph={journey.speedKmph} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Crowdsourced Onboard GPS Telemetry Mesh Banner */}
+          <CrowdsourceBanner
+            trainNumber={journey.train.number}
+            trainName={journey.train.name}
+          />
+
+          {/* Smart Coach Position & Platform Guidance */}
+          <CoachFinderWidget
+            trainNumber={journey.train.number}
+            platformNumber={journey.nextStation?.platformNumber || 'PF 1'}
+          />
+
+          {/* Main Grid: Timeline + Delay Analytics */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+            <StationTimeline stations={journey.stations} currentStationId={journey.nextStation?.id} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <DelayDistributionChart stations={journey.stations} />
+              <SpeedProfileChart stations={journey.stations} speedKmph={journey.speedKmph} />
+            </div>
           </div>
         </div>
       )}

@@ -1,0 +1,17 @@
+{
+  "short_name": "RailGaadi",
+  "name": "RailGaadi — Live Train Telemetry & Offline Companion",
+  "description": "Real-time Indian Railway train tracking, predictive delay analytics, and offline journey companion.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#07090e",
+  "theme_color": "#00e5ff",
+  "display": "standalone",
+  "orientation": "portrait"
+}

@@ -3,6 +3,7 @@ import * as maplibregl from 'maplibre-gl';
 import type { LiveJourney, Station } from '../../types';
 import { useMapStore } from '../../stores/mapStore';
 import { useSimulationStore } from '../../stores/simulationStore';
+import { buildRoutePolyline } from '../../services/trackGeometryService';
 import { Navigation } from 'lucide-react';
 import { Button } from '../ui/Button';
 
@@ -78,8 +79,8 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
         setMapLoaded(true);
         map.resize();
 
-        // Add Route GeoJSON Line
-        const coordinates = journey.stations.map((st) => [st.longitude, st.latitude]);
+        // Add Smooth GIS Route GeoJSON Line
+        const coordinates = buildRoutePolyline(journey.stations);
 
         if (!map.getSource('route-line')) {
           map.addSource('route-line', {

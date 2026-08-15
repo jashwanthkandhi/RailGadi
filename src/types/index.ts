@@ -31,6 +31,10 @@ export interface Station {
   haltMinutes?: number;
   amenities?: string[];
   coachPosition?: string[];
+  predictedArrival?: string;
+  predictedDeparture?: string;
+  predictionConfidenceMinutes?: number;
+  delayRisk?: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
 export interface Train {
