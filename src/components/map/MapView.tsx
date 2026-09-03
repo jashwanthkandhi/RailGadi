@@ -75,6 +75,8 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
       : FALLBACK_DARK_STYLE;
 
     let map: maplibregl.Map;
+    let r1: ReturnType<typeof setTimeout> | undefined;
+    let r2: ReturnType<typeof setTimeout> | undefined;
 
     try {
       map = new maplibregl.Map({
@@ -90,8 +92,8 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
       mapRef.current = map;
 
       // Force canvas layout calculation
-      const r1 = setTimeout(() => map.resize(), 100);
-      const r2 = setTimeout(() => map.resize(), 500);
+      r1 = setTimeout(() => map.resize(), 100);
+      r2 = setTimeout(() => map.resize(), 500);
 
       // Safe fallback if remote MapTiler style fails to load
       map.on('error', (e) => {
@@ -218,6 +220,8 @@ export const MapView: React.FC<MapViewProps> = ({ journey, onSelectStation }) =>
     window.addEventListener('resize', handleResize);
 
     return () => {
+      if (r1) clearTimeout(r1);
+      if (r2) clearTimeout(r2);
       window.removeEventListener('resize', handleResize);
       mapRef.current?.remove();
     };
