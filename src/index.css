@@ -1,5 +1,7 @@
 /* Reset only — all RailGaadi styles live in src/styles/index.css */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 

@@ -62,3 +62,26 @@
   --shadow-overlay: 0 32px 80px rgba(0, 0, 0, 0.8);
   --shadow-glow: 0 0 30px rgba(0, 229, 255, 0.2);
 }
+
+/* Light mode */
+body.light-mode {
+  --bg-dark: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-card-solid: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-surface: #e2e8f0;
+  --bg-input: #ffffff;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-primary-on-accent: #ffffff;
+
+  --border-color: rgba(15, 23, 42, 0.12);
+  --border-color-hover: rgba(0, 229, 255, 0.45);
+
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.15);
+}
