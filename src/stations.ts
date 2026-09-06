@@ -1,4 +1,4 @@
-import { Station } from "./station.model";
+import type { Station } from "./station.model";
 
 export const stations: Station[] = [
   {
