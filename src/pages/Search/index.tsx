@@ -14,7 +14,7 @@ export const SearchPage: React.FC = () => {
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
-  
+
   const navigate = useNavigate();
   const { addRecentSearch, isFavourite, toggleFavourite } = useUserStore();
   const { showToast } = useToast();
@@ -36,21 +36,30 @@ export const SearchPage: React.FC = () => {
     setSelectedIndex(-1);
   }, [debouncedQuery]);
 
-  // Keyboard navigation handler (ArrowUp, ArrowDown, Enter, Esc)
+  // Keyboard navigation handler
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+
       const cleanNum = query.trim().replace(/[^0-9]/g, '');
+
       if (cleanNum.length === 5) {
         navigate(`/journey/${cleanNum}`);
         return;
       }
+
       if (filteredTrains.length === 0) return;
-      const targetTrain = selectedIndex >= 0 ? filteredTrains[selectedIndex] : filteredTrains[0];
+
+      const targetTrain =
+        selectedIndex >= 0
+          ? filteredTrains[selectedIndex]
+          : filteredTrains[0];
+
       if (targetTrain) {
         addRecentSearch(targetTrain);
         navigate(`/journey/${targetTrain.id}`);
       }
+
       return;
     }
 
@@ -58,16 +67,19 @@ export const SearchPage: React.FC = () => {
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev < filteredTrains.length - 1 ? prev + 1 : 0));
+      setSelectedIndex((prev) =>
+        prev < filteredTrains.length - 1 ? prev + 1 : 0
+      );
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredTrains.length - 1));
+      setSelectedIndex((prev) =>
+        prev > 0 ? prev - 1 : filteredTrains.length - 1
+      );
     } else if (e.key === 'Escape') {
       setQuery('');
       inputRef.current?.blur();
     }
   };
-
 
   const handleClear = () => {
     setQuery('');
@@ -75,9 +87,30 @@ export const SearchPage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px 80px 24px' }}>
-      <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '8px' }}>Search Trains</h1>
-      <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+    <div
+      style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        padding: '32px 24px 80px 24px'
+      }}
+    >
+      <h1
+        style={{
+          fontSize: '1.8rem',
+          fontWeight: 800,
+          marginBottom: '8px'
+        }}
+      >
+        Search Trains
+      </h1>
+
+      <p
+        style={{
+          fontSize: '0.95rem',
+          color: 'var(--text-secondary)',
+          marginBottom: '24px'
+        }}
+      >
         Find any Indian Railway train by train number, train name, or city.
       </p>
 
@@ -96,13 +129,14 @@ export const SearchPage: React.FC = () => {
         }}
       >
         <Search size={20} color="var(--primary)" />
+
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search by train number, name, or city (Use ↑↓ arrows to select, Enter to track)..."
+          placeholder="Search by train number, name, or city..."
           autoFocus
           style={{
             width: '100%',
@@ -116,7 +150,11 @@ export const SearchPage: React.FC = () => {
         />
 
         {isLoading ? (
-          <Loader2 size={18} color="var(--primary)" style={{ animation: 'spin 1s linear infinite' }} />
+          <Loader2
+            size={18}
+            color="var(--primary)"
+            style={{ animation: 'spin 1s linear infinite' }}
+          />
         ) : query ? (
           <button
             onClick={handleClear}
@@ -137,32 +175,99 @@ export const SearchPage: React.FC = () => {
       </div>
 
       {/* Results Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: '16px',
+          alignItems: 'center'
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            color: 'var(--text-muted)',
+            letterSpacing: '0.05em'
+          }}
+        >
           {isLoading
             ? 'SEARCHING...'
-            : `${filteredTrains.length} TRAIN${filteredTrains.length !== 1 ? 'S' : ''} FOUND`}
+            : `${filteredTrains.length} TRAIN${
+                filteredTrains.length !== 1 ? 'S' : ''
+              } FOUND`}
         </span>
 
         {filteredTrains.length > 0 && (
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            Tip: Press <kbd style={{ padding: '2px 6px', background: 'var(--bg-surface)', borderRadius: '4px' }}>↑</kbd>{' '}
-            <kbd style={{ padding: '2px 6px', background: 'var(--bg-surface)', borderRadius: '4px' }}>↓</kbd> to navigate,{' '}
-            <kbd style={{ padding: '2px 6px', background: 'var(--bg-surface)', borderRadius: '4px' }}>Enter</kbd> to track
+          <span
+            style={{
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)'
+            }}
+          >
+            Tip: Press{' '}
+            <kbd
+              style={{
+                padding: '2px 6px',
+                background: 'var(--bg-surface)',
+                borderRadius: '4px'
+              }}
+            >
+              ↑
+            </kbd>{' '}
+            <kbd
+              style={{
+                padding: '2px 6px',
+                background: 'var(--bg-surface)',
+                borderRadius: '4px'
+              }}
+            >
+              ↓
+            </kbd>{' '}
+            to navigate
           </span>
         )}
       </div>
 
       {/* Loading Skeleton */}
       {isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <Skeleton style={{ height: '80px', borderRadius: 'var(--radius-lg)' }} />
-          <Skeleton style={{ height: '80px', borderRadius: 'var(--radius-lg)' }} />
-          <Skeleton style={{ height: '80px', borderRadius: 'var(--radius-lg)' }} />
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px'
+          }}
+        >
+          <Skeleton
+            style={{
+              height: '80px',
+              borderRadius: 'var(--radius-lg)'
+            }}
+          />
+
+          <Skeleton
+            style={{
+              height: '80px',
+              borderRadius: 'var(--radius-lg)'
+            }}
+          />
+
+          <Skeleton
+            style={{
+              height: '80px',
+              borderRadius: 'var(--radius-lg)'
+            }}
+          />
         </div>
       ) : filteredTrains.length > 0 ? (
         /* Results List */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px'
+          }}
+        >
           {filteredTrains.map((train, idx) => {
             const fav = isFavourite(train.id);
             const isSelected = idx === selectedIndex;
@@ -175,14 +280,27 @@ export const SearchPage: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '16px',
-                  borderColor: isSelected ? 'var(--primary)' : undefined,
-                  boxShadow: isSelected ? 'var(--shadow-glow)' : undefined,
-                  backgroundColor: isSelected ? 'rgba(0, 229, 255, 0.04)' : undefined,
+                  borderColor: isSelected
+                    ? 'var(--primary)'
+                    : undefined,
+                  boxShadow: isSelected
+                    ? 'var(--shadow-glow)'
+                    : undefined,
+                  backgroundColor: isSelected
+                    ? 'rgba(0, 229, 255, 0.04)'
+                    : undefined,
                   transition: 'all var(--transition-fast)'
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      marginBottom: '4px'
+                    }}
+                  >
                     <span
                       style={{
                         fontSize: '1.1rem',
@@ -193,23 +311,47 @@ export const SearchPage: React.FC = () => {
                     >
                       {train.number}
                     </span>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+
+                    <h3
+                      style={{
+                        fontSize: '1.1rem',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)'
+                      }}
+                    >
                       {train.name}
                     </h3>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    {train.source} → {train.destination} • {train.totalDistanceKm} km
+
+                  <p
+                    style={{
+                      fontSize: '0.85rem',
+                      color: 'var(--text-secondary)'
+                    }}
+                  >
+                    {train.source} → {train.destination} •{' '}
+                    {train.totalDistanceKm} km
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}
+                >
+                  {/* Favourite Button */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
                       toggleFavourite(train);
+
                       showToast({
-                        message: fav ? `Removed ${train.name} from Favourites` : `Added ${train.name} to Favourites`,
+                        message: fav
+                          ? `Removed ${train.name} from Favourites`
+                          : `Added ${train.name} to Favourites`,
                         type: fav ? 'info' : 'success'
                       });
                     }}
@@ -217,10 +359,16 @@ export const SearchPage: React.FC = () => {
                       <Heart
                         size={18}
                         fill={fav ? 'var(--primary)' : 'none'}
-                        color={fav ? 'var(--primary)' : 'var(--text-muted)'}
+                        color={
+                          fav
+                            ? 'var(--primary)'
+                            : 'var(--text-muted)'
+                        }
                       />
                     }
                   />
+
+                  {/* Track Journey Button */}
                   <Button
                     variant="primary"
                     size="sm"
@@ -231,6 +379,17 @@ export const SearchPage: React.FC = () => {
                     icon={<ArrowRight size={16} />}
                   >
                     Track Journey
+                  </Button>
+
+                  {/* Book Ticket Button */}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      navigate(`/booking?trainId=${train.id}`);
+                    }}
+                  >
+                    Book Ticket
                   </Button>
                 </div>
               </Card>
@@ -250,8 +409,13 @@ export const SearchPage: React.FC = () => {
 
       <style>{`
         @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </div>

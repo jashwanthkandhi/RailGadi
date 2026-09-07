@@ -8,14 +8,25 @@ import { TravelCompanionPage } from '../pages/TravelCompanion';
 import { FavouritesPage } from '../pages/Favourites';
 import { SharedJourneyPage } from '../pages/SharedJourney';
 import { SettingsPage } from '../pages/Settings';
+import { TicketBookingPage } from '../pages/TicketBooking';
 import { DesktopNavbar } from '../components/navigation/DesktopNavbar';
 import { MobileNavbar } from '../components/navigation/MobileNavbar';
-
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="cyber-hud-bg" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div
+      className="cyber-hud-bg"
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
       <DesktopNavbar />
-      <main style={{ flex: 1 }}>{children}</main>
+
+      <main style={{ flex: 1 }}>
+        {children}
+      </main>
+
       <MobileNavbar />
     </div>
   );
@@ -30,6 +41,7 @@ const router = createBrowserRouter([
       </Layout>
     )
   },
+
   {
     path: '/search',
     element: (
@@ -38,6 +50,7 @@ const router = createBrowserRouter([
       </Layout>
     )
   },
+
   {
     path: '/journey/:id',
     element: (
@@ -46,6 +59,7 @@ const router = createBrowserRouter([
       </Layout>
     )
   },
+
   {
     path: '/analytics/:id',
     element: (
@@ -54,6 +68,7 @@ const router = createBrowserRouter([
       </Layout>
     )
   },
+
   {
     path: '/companion/:id',
     element: (
@@ -62,6 +77,7 @@ const router = createBrowserRouter([
       </Layout>
     )
   },
+
   {
     path: '/favourites',
     element: (
@@ -70,6 +86,7 @@ const router = createBrowserRouter([
       </Layout>
     )
   },
+
   {
     path: '/track/:shareId',
     element: (
@@ -78,11 +95,21 @@ const router = createBrowserRouter([
       </Layout>
     )
   },
+
   {
     path: '/settings',
     element: (
       <Layout>
         <SettingsPage />
+      </Layout>
+    )
+  },
+
+  {
+    path: '/booking',
+    element: (
+      <Layout>
+        <TicketBookingPage />
       </Layout>
     )
   }
