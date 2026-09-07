@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Train, Search, BarChart3, Compass, Heart, Settings } from 'lucide-react';
+import { Train, Search, BarChart3, Compass, Heart, Settings, Sun, Moon } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 
 export const DesktopNavbar: React.FC = () => {
   const location = useLocation();
+  const [darkMode, setDarkMode] = useState(true);
+  useEffect(() => {
+    document.body.classList.toggle('light-mode', !darkMode);
+  }, [darkMode]);
   const recentSearches = useUserStore((state) => state.recentSearches);
 
   // Extract train ID from current URL (e.g. /journey/22436, /analytics/22436) or latest recent search
@@ -26,7 +30,7 @@ export const DesktopNavbar: React.FC = () => {
         top: 0,
         zIndex: 100,
         height: '64px',
-        backgroundColor: 'rgba(7, 9, 14, 0.85)',
+        backgroundColor: 'var(--bg-dark)',
         backdropFilter: 'var(--glass-backdrop)',
         WebkitBackdropFilter: 'var(--glass-backdrop)',
         borderBottom: '1px solid var(--border-color)',
@@ -154,6 +158,23 @@ export const DesktopNavbar: React.FC = () => {
             ⌘K
           </kbd>
         </Link>
+
+        <button
+          type="button"
+          onClick={() => setDarkMode(!darkMode)}
+          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          style={{
+            padding: '8px',
+            border: 'none',
+            background: 'transparent',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer'
+          }}
+        >
+          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
 
         <Link
           to="/settings"
