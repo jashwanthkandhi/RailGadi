@@ -1,4 +1,4 @@
-const stations = [
+export const stations = [
   {
     stationName: "Secunderabad",
     location: "Telangana",

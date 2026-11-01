@@ -1,0 +1,34 @@
+# Dependency directories
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+
+# Version control
+.git/
+.github/
+.gitignore
+
+# Environment & local configurations
+.env.local
+.env.*.local
+
+# IDE and Editor artifacts
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Linter and test caches
+.oxlintrc.json
+
+# Documentation and Docker files
+Dockerfile*
+docker-compose*.yml
+README.md

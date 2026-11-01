@@ -1,0 +1,35 @@
+services:
+  railgadi-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_APP_NAME: ${VITE_APP_NAME:-RailGaadi}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-2.0.0}
+        VITE_MAPTILER_API_KEY: ${VITE_MAPTILER_API_KEY:-T0WaJsOAkPh2Cx8qf6R9}
+        VITE_RAILRADAR_API_KEY: ${VITE_RAILRADAR_API_KEY:-rg_99e789ae100946d58adb80858201a11a}
+        VITE_RAILRADAR_BASE_URL: ${VITE_RAILRADAR_BASE_URL:-/api/v1}
+        VITE_OPENWEATHER_API_KEY: ${VITE_OPENWEATHER_API_KEY:-c41b6a424377839b2947137ddc6864c6}
+        VITE_OPENWEATHER_BASE_URL: ${VITE_OPENWEATHER_BASE_URL:-https://api.openweathermap.org/data/2.5}
+        VITE_OPENELEVATION_BASE_URL: ${VITE_OPENELEVATION_BASE_URL:-https://api.open-elevation.com/api/v1/lookup}
+        VITE_OPENTOPO_API_KEY: ${VITE_OPENTOPO_API_KEY:-0491bead14a4baaa1c8bafc34d86441c}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_JOURNEY_REFRESH_INTERVAL_MS: ${VITE_JOURNEY_REFRESH_INTERVAL_MS:-60000}
+        VITE_SEARCH_DEBOUNCE_MS: ${VITE_SEARCH_DEBOUNCE_MS:-350}
+    image: railgadi-frontend:latest
+    container_name: railgadi-frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1/health || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - railgadi-network
+
+networks:
+  railgadi-network:
+    driver: bridge
